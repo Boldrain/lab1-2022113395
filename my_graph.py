@@ -16,22 +16,47 @@ def build_word_graph(word_list):
 def visible_graph(graph_data):
     G = nx.DiGraph()
 
-    # 添加边和权重（确保每对节点最多一条边）
+    # 添加边和权重
     for (src, dst), weight in graph_data.items():
         G.add_edge(src, dst, weight=weight)
 
-    # 选择布局方式
-    pos = nx.spring_layout(G, seed=42)
+    # 更美观的布局（你也可以换回 spring_layout）
+    pos = nx.kamada_kawai_layout(G)
 
-    plt.figure(figsize=(10, 6))
-    nx.draw(G, pos, with_labels=True, node_size=2000, node_color="lightblue",
-            arrows=True, font_size=10, width=2, arrowstyle='->')
+    plt.figure(figsize=(12, 8))
+
+    # 绘制边（放前面，确保在节点“底下”）
+    nx.draw_networkx_edges(
+        G, pos,
+        edge_color='gray',
+        width=2,
+        arrowstyle='-|>', arrows=True,
+        connectionstyle='arc3,rad=0.2',  # 增大曲率，避开节点中心
+        alpha=0.8,
+        min_target_margin=15  # 离目标节点远一点，防止箭头重叠
+    )
+
+    # 绘制节点
+    nx.draw_networkx_nodes(
+        G, pos,
+        node_size=1000,  # 调小一点
+        node_color="skyblue",
+        edgecolors='black',  # 增加对比边缘
+        linewidths=1.5,
+        alpha=0.95
+    )
+
+    # 绘制标签
+    nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
+
+    # 边权重
     edge_labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red', font_size=9)
 
-    plt.title("Word Adjacency Directed Graph")
+    plt.title("Word Adjacency Directed Graph", fontsize=14)
     plt.axis("off")
     plt.tight_layout()
+    plt.savefig("/home/zry/software_lab/lab1/graph.png", dpi=300, bbox_inches='tight')
     plt.show()
 
 def word_graph(graph_data):
@@ -120,16 +145,30 @@ def find_shortest_path(graph_data):
     print('----------------------------------------------------')
     start = input('请输入起点:')
     end = input('请输入终点:')
-    if (start == '' or end == ''):
+    if (start == '' and end == ''):
         print("你没有输入任何内容！")
         return
-    path, distance = dijkstra(graph_data, start, end)
-    if path is None:
-        print(f"{start} 到 {end} 不可达.")
-    else:
-        print(f"最短路径: {' -> '.join(path)}.")
-        print(f"最短距离: {distance}.")
-    return
+    elif (start == '' and end != '') or (start != '' and end == ''):
+        nodes, distance = floyd(graph_data)
+        root = start if start != '' else end
+        if root not in nodes:
+            print(f"{root} 不在图中.")
+            return
+        print(f"从 {root} 到其他节点的最短路径:")
+        for node in nodes:
+            if node != root:
+                if distance[(root, node)] == float('inf'):
+                    print(f"{root} 到 {node} 不可达.")
+                else:
+                    print(f"{root} 到 {node} 的最短距离: {distance[(root, node)]}.")
+    else :
+        path, distance = dijkstra(graph_data, start, end)
+        if path is None:
+            print(f"{start} 到 {end} 不可达.")
+        else:
+            print(f"最短路径: {' -> '.join(path)}.")
+            print(f"最短距离: {distance}.")
+        return
 
 def dijkstra(graph_data, start, end):
     # 获取图中所有节点
@@ -178,6 +217,31 @@ def dijkstra(graph_data, start, end):
         return path, distances[end]
     else:
         return None, None
+    
+def floyd(graph_data):
+    # 初始化距离矩阵
+    dist = defaultdict(int)
+    # 获取图中所有节点
+    nodes_from = {src for (src, _) in graph_data}
+    nodes_to = {dst for (_, dst) in graph_data}
+    all_nodes = nodes_from.union(nodes_to)
+
+    for left in all_nodes:
+        for right in all_nodes :
+            if left == right :
+                dist[(left, right)] = 0
+            else :
+                dist[(left, right)] = graph_data.get((left, right), float('inf'))
+    
+    # Floyd-Warshall 核心算法
+    for k in all_nodes:
+        for i in all_nodes:
+            for j in all_nodes:
+                # 通过中间节点 k 更新从 i 到 j 的最短路径
+                if dist[(i, j)] > dist[(i, k)] + dist[(k, j)]:
+                    dist[(i, j)] = dist[(i, k)] + dist[(k, j)]
+    
+    return all_nodes, dist
     
 def get_pagerank(graph_data, damping=0.85, max_iter=100, tol=1e-6):
     print('----------------------------------------------------')

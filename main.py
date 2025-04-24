@@ -43,6 +43,8 @@ if __name__ == "__main__":
 
     # 文字化图
     # my_graph.word_graph(words_graph)
+    # 可视化图
+    my_graph.visible_graph(words_graph)
     # 桥接字
     # word1 = input('键入第一个桥接字:')
     # word2 = input('键入第二个桥接字:')
@@ -55,4 +57,4 @@ if __name__ == "__main__":
     # 求pr值
     # my_graph.get_pagerank(words_graph)
     # 随机游走
-    my_graph.random_walk(words_graph)
+    # my_graph.random_walk(words_graph)
