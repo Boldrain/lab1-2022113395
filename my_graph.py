@@ -2,122 +2,251 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import random
+import string
+import os
 
-def build_word_graph(word_list):
-    word_list = [word.lower() for word in word_list]
-    edge_weights = defaultdict(int)
+class graph:
+    def __init__(self, file_path=''):
+        self.file_path = file_path
+        words = process_text_file(file_path)
+        self.graph_data = build_word_graph(words)
 
-    for i in range(len(word_list) - 1):
-        a, b = word_list[i], word_list[i + 1]
-        edge_weights[(a, b)] += 1
+    def reload_graph(self, file_path):
+        if (file_path == ''):
+            file_path = 'sample.txt'
+        elif file_path.endswith('.txt') == False:
+            file_path = file_path + '.txt'
 
-    return edge_weights
+        if (os.path.exists(file_path) == False):
+            print("文件不存在，请检查路径")
+            exit(1)
 
-def visible_graph(graph_data):
-    G = nx.DiGraph()
+        self.file_path = file_path
+        words = process_text_file(file_path)
+        self.graph_data = build_word_graph(words)
 
-    # 添加边和权重
-    for (src, dst), weight in graph_data.items():
-        G.add_edge(src, dst, weight=weight)
+    def visible_graph(self):
+        G = nx.DiGraph()
 
-    # 更美观的布局（你也可以换回 spring_layout）
-    pos = nx.kamada_kawai_layout(G)
+        # 添加边和权重
+        for (src, dst), weight in self.graph_data.items():
+            G.add_edge(src, dst, weight=weight)
 
-    plt.figure(figsize=(12, 8))
+        # 更美观的布局（你也可以换回 spring_layout）
+        pos = nx.kamada_kawai_layout(G)
 
-    # 绘制边（放前面，确保在节点“底下”）
-    nx.draw_networkx_edges(
-        G, pos,
-        edge_color='gray',
-        width=2,
-        arrowstyle='-|>', arrows=True,
-        connectionstyle='arc3,rad=0.2',  # 增大曲率，避开节点中心
-        alpha=0.8,
-        min_target_margin=15  # 离目标节点远一点，防止箭头重叠
-    )
+        plt.figure(figsize=(12, 8))
 
-    # 绘制节点
-    nx.draw_networkx_nodes(
-        G, pos,
-        node_size=1000,  # 调小一点
-        node_color="skyblue",
-        edgecolors='black',  # 增加对比边缘
-        linewidths=1.5,
-        alpha=0.95
-    )
+        # 绘制边（放前面，确保在节点“底下”）
+        nx.draw_networkx_edges(
+            G, pos,
+            edge_color='gray',
+            width=2,
+            arrowstyle='-|>', arrows=True,
+            connectionstyle='arc3,rad=0.2',  # 增大曲率，避开节点中心
+            alpha=0.8,
+            min_target_margin=15  # 离目标节点远一点，防止箭头重叠
+        )
 
-    # 绘制标签
-    nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
+        # 绘制节点
+        nx.draw_networkx_nodes(
+            G, pos,
+            node_size=1000,  # 调小一点
+            node_color="skyblue",
+            edgecolors='black',  # 增加对比边缘
+            linewidths=1.5,
+            alpha=0.95
+        )
 
-    # 边权重
-    edge_labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red', font_size=9)
+        # 绘制标签
+        nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
 
-    plt.title("Word Adjacency Directed Graph", fontsize=14)
-    plt.axis("off")
-    plt.tight_layout()
-    plt.savefig("/home/zry/software_lab/lab1/graph.png", dpi=300, bbox_inches='tight')
-    plt.show()
+        # 边权重
+        edge_labels = nx.get_edge_attributes(G, 'weight')
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='red', font_size=9)
 
-def word_graph(graph_data):
-    print('----------------------------------------------------')
-    for (src, dst), weight in graph_data.items():
-        print(f"{src} -> {dst} [weight={weight}]")
+        plt.title("Word Adjacency Directed Graph", fontsize=14)
+        plt.axis("off")
+        plt.tight_layout()
+        plt.savefig("/home/zry/software_lab/lab1/graph.png", dpi=300, bbox_inches='tight')
+        plt.show()
 
-def find_bridge_words(graph_data, word1='', word2='', call_flag=False):
-    if not call_flag:
+    def word_graph(self):
         print('----------------------------------------------------')
-        word1 = input('键入第一个桥接字:')
-        word2 = input('键入第二个桥接字:')
-    
-    if word1 == '' or word2 == '':
-        print("你输入的内容有误！")
-        return []
-    word1 = word1.lower().strip()
-    word2 = word2.lower().strip()
-    bridge_words = []
+        for (src, dst), weight in self.graph_data.items():
+            print(f"{src} -> {dst} [weight={weight}]")
 
-    # 获取图中所有节点
-    nodes_from = {src for (src, _) in graph_data}
-    nodes_to = {dst for (_, dst) in graph_data}
-    all_nodes = nodes_from.union(nodes_to)
-
-    # 检查两个单词是否在图中
-    if word1 not in all_nodes :
-        if word2 not in all_nodes :
-            if not call_flag:
-                print(f"No {word1} or {word2} in the graph!")
-            return bridge_words
-        else:
-            if not call_flag:
-                print(f"No {word1} in the graph!")
-            return bridge_words
-    elif word2 not in all_nodes:
+    def find_bridge_words(self, word1='', word2='', call_flag=False):
         if not call_flag:
-            print(f"No {word2} in the graph!")
+            print('----------------------------------------------------')
+            word1 = input('键入第一个桥接字:')
+            word2 = input('键入第二个桥接字:')
+        
+        if word1 == '' or word2 == '':
+            print("你输入的内容有误！")
+            return []
+        word1 = word1.lower().strip()
+        word2 = word2.lower().strip()
+        bridge_words = []
+
+        graph_data = self.graph_data
+
+        # 获取图中所有节点
+        nodes_from = {src for (src, _) in graph_data}
+        nodes_to = {dst for (_, dst) in graph_data}
+        all_nodes = nodes_from.union(nodes_to)
+
+        # 检查两个单词是否在图中
+        if word1 not in all_nodes :
+            if word2 not in all_nodes :
+                if not call_flag:
+                    print(f"No {word1} or {word2} in the graph!")
+                return bridge_words
+            else:
+                if not call_flag:
+                    print(f"No {word1} in the graph!")
+                return bridge_words
+        elif word2 not in all_nodes:
+            if not call_flag:
+                print(f"No {word2} in the graph!")
+            return bridge_words
+
+        
+        for (src1, mid) in graph_data:
+            if src1 == word1:
+                if (mid, word2) in graph_data:
+                    bridge_words.append(mid)
+
+        if not bridge_words:
+            if not call_flag:
+                print(f"没有从 {word1} 到 {word2} 的桥接字!")
+        else:
+            # 拼接输出格式
+            if len(bridge_words) == 1:
+                if not call_flag:
+                    print(f"{word1} 到 {word2} 的桥接字是: {bridge_words[0]}.")
+            else:
+                if not call_flag:
+                    bridge_str = ', '.join(bridge_words[:-1]) + f", and {bridge_words[-1]}"
+                    print(f"{word1} 到 {word2} 的桥接字是: {bridge_str}.")
         return bridge_words
-
     
-    for (src1, mid) in graph_data:
-        if src1 == word1:
-            if (mid, word2) in graph_data:
-                bridge_words.append(mid)
+    def find_shortest_path(self):
+        print('----------------------------------------------------')
+        start = input('请输入起点:')
+        end = input('请输入终点:')
+        if (start == '' and end == ''):
+            print("你没有输入任何内容！")
+            return
+        elif (start == '' and end != '') or (start != '' and end == ''):
+            graph_data = self.graph_data
+            nodes, distance = floyd(graph_data)
+            root = start if start != '' else end
+            if root not in nodes:
+                print(f"{root} 不在图中.")
+                return
+            print(f"从 {root} 到其他节点的最短路径:")
+            for node in nodes:
+                if node != root:
+                    if distance[(root, node)] == float('inf'):
+                        print(f"{root} 到 {node} 不可达.")
+                    else:
+                        print(f"{root} 到 {node} 的最短距离: {distance[(root, node)]}.")
+        else :
+            graph_data = self.graph_data
+            path, distance = dijkstra(graph_data, start, end)
+            if path is None:
+                print(f"{start} 到 {end} 不可达.")
+            else:
+                print(f"最短路径: {' -> '.join(path)}.")
+                print(f"最短距离: {distance}.")
+            return
+        
+    def get_pagerank(self, damping=0.85, max_iter=100, tol=1e-6):
+        print('----------------------------------------------------')
+        specific_node = input('请输入你想要查询pr值的节点:')
+        # edges: List of (from, to)
+        graph = defaultdict(set)       # 出边
+        reverse_graph = defaultdict(set)  # 入边
+        nodes = set()
+        graph_data = self.graph_data
 
-    if not bridge_words:
-        if not call_flag:
-            print(f"No bridge words from {word1} to {word2}!")
-    else:
-        # 拼接输出格式
-        if len(bridge_words) == 1:
-            if not call_flag:
-                print(f"The bridge word from {word1} to {word2} is: {bridge_words[0]}.")
+        for src, dst in graph_data:
+            graph[src].add(dst)
+            reverse_graph[dst].add(src)
+            nodes.add(src)
+            nodes.add(dst)
+
+        N = len(nodes)
+        pr = {node: 1 / N for node in nodes}
+
+        for iteration in range(max_iter):
+            new_pr = {}
+            delta = 0  # 用于判断是否收敛
+
+            for node in nodes:
+                inbound = reverse_graph[node]
+                rank_sum = 0
+                for q in inbound:
+                    out_degree = len(graph[q])
+                    if out_degree > 0:
+                        rank_sum += pr[q] / out_degree
+                new_pr[node] = (1 - damping) / N + damping * rank_sum
+                delta += abs(new_pr[node] - pr[node])
+
+            pr = new_pr
+
+            if delta < tol:
+                break
+        if specific_node:
+            if specific_node in pr:
+                print(f"{specific_node}的PageRank值: {pr[specific_node]}")
+            else:
+                print(f"{specific_node} 不在图中.")
         else:
-            if not call_flag:
-                bridge_str = ', '.join(bridge_words[:-1]) + f", and {bridge_words[-1]}"
-                print(f"The bridge words from {word1} to {word2} are: {bridge_str}.")
-    return bridge_words
+            print(f'全部的PageRank值:{pr}')
+        return pr
 
-def insert_bridge_words(graph_data):
+    def random_walk(self):
+        print('----------------------------------------------------')
+        graph_data = self.graph_data
+        visited_edges = set()
+        visited_nodes = []
+        # path_edges = []
+
+        # 随机选一个起点
+        current = random.choice([left for left, _ in graph_data])
+        visited_nodes.append(current)
+
+        print(f"起点: {current}")
+
+        while True:
+            neighbors = [dst for (src, dst) in graph_data if src == current]
+            if not neighbors:
+                print(f"节点 {current} 没有出边，结束遍历。")
+                break
+
+            next_node = random.choice(neighbors)
+            edge = (current, next_node)
+
+            if edge in visited_edges:
+                visited_nodes.append(next_node)
+                # path_edges.append(edge)
+                print(f"遇到重复边 {edge}，结束遍历。")
+                break
+
+            visited_nodes.append(next_node)
+            # path_edges.append(edge)
+            visited_edges.add(edge)
+            current = next_node
+
+        walk_path = ' '.join(visited_nodes)
+        print(f"遍历路径: {walk_path}")
+        with open('random_walk_path.txt', 'w', encoding='utf-8') as f:
+            f.write(walk_path)
+        return
+
+def insert_bridge_words(graph):
     print('----------------------------------------------------')
     sentence = input('请输入你想要插入桥接字的句子:')
     if (sentence == ''):
@@ -131,7 +260,7 @@ def insert_bridge_words(graph_data):
         w1, w2 = words[i], words[i + 1]
         new_sentence.append(w1)
 
-        bridges = find_bridge_words(graph_data, w1, w2, True)
+        bridges = graph.find_bridge_words(w1, w2, True)
         if bridges:
             bridge = random.choice(bridges)
             new_sentence.append(bridge)
@@ -140,35 +269,6 @@ def insert_bridge_words(graph_data):
     print('结果:', end='')
     print(' '.join(new_sentence))
     return
-
-def find_shortest_path(graph_data):
-    print('----------------------------------------------------')
-    start = input('请输入起点:')
-    end = input('请输入终点:')
-    if (start == '' and end == ''):
-        print("你没有输入任何内容！")
-        return
-    elif (start == '' and end != '') or (start != '' and end == ''):
-        nodes, distance = floyd(graph_data)
-        root = start if start != '' else end
-        if root not in nodes:
-            print(f"{root} 不在图中.")
-            return
-        print(f"从 {root} 到其他节点的最短路径:")
-        for node in nodes:
-            if node != root:
-                if distance[(root, node)] == float('inf'):
-                    print(f"{root} 到 {node} 不可达.")
-                else:
-                    print(f"{root} 到 {node} 的最短距离: {distance[(root, node)]}.")
-    else :
-        path, distance = dijkstra(graph_data, start, end)
-        if path is None:
-            print(f"{start} 到 {end} 不可达.")
-        else:
-            print(f"最短路径: {' -> '.join(path)}.")
-            print(f"最短距离: {distance}.")
-        return
 
 def dijkstra(graph_data, start, end):
     # 获取图中所有节点
@@ -243,90 +343,43 @@ def floyd(graph_data):
     
     return all_nodes, dist
     
-def get_pagerank(graph_data, damping=0.85, max_iter=100, tol=1e-6):
-    print('----------------------------------------------------')
-    specific_node = input('请输入你想要查询pr值的节点:')
-    # edges: List of (from, to)
-    graph = defaultdict(set)       # 出边
-    reverse_graph = defaultdict(set)  # 入边
-    nodes = set()
 
-    for src, dst in graph_data:
-        graph[src].add(dst)
-        reverse_graph[dst].add(src)
-        nodes.add(src)
-        nodes.add(dst)
 
-    N = len(nodes)
-    pr = {node: 1 / N for node in nodes}
+def process_text_file(file_path):
+    # 读取文件内容
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
 
-    for iteration in range(max_iter):
-        new_pr = {}
-        delta = 0  # 用于判断是否收敛
+    # 将换行符替换为空格
+    content = content.replace('\n', ' ').replace('\r', ' ')
 
-        for node in nodes:
-            inbound = reverse_graph[node]
-            rank_sum = 0
-            for q in inbound:
-                out_degree = len(graph[q])
-                if out_degree > 0:
-                    rank_sum += pr[q] / out_degree
-            new_pr[node] = (1 - damping) / N + damping * rank_sum
-            delta += abs(new_pr[node] - pr[node])
-
-        pr = new_pr
-
-        if delta < tol:
-            break
-    if specific_node:
-        if specific_node in pr:
-            print(f"{specific_node}的PageRank值: {pr[specific_node]}")
+    # 定义保留字符为英文字母，其余都当作空格
+    processed = []
+    for char in content:
+        if char.isalpha():
+            processed.append(char)
         else:
-            print(f"{specific_node} 不在图中.")
-    else:
-        print(f'全部的PageRank值:{pr}')
-    return pr
+            processed.append(' ')
 
-def random_walk(graph_data):
-    print('----------------------------------------------------')
-    visited_edges = set()
-    visited_nodes = []
-    # path_edges = []
+    # 拼接并按空格分割为单词列表
+    cleaned_text = ''.join(processed)
+    cleaned_text = cleaned_text.split()
+    
 
-    # 随机选一个起点
-    current = random.choice([left for left, _ in graph_data])
-    visited_nodes.append(current)
+    return cleaned_text
 
-    print(f"起点: {current}")
+def build_word_graph(word_list):
+    word_list = [word.lower() for word in word_list]
+    edge_weights = defaultdict(int)
 
-    while True:
-        neighbors = [dst for (src, dst) in graph_data if src == current]
-        if not neighbors:
-            print(f"节点 {current} 没有出边，结束遍历。")
-            break
+    for i in range(len(word_list) - 1):
+        a, b = word_list[i], word_list[i + 1]
+        edge_weights[(a, b)] += 1
 
-        next_node = random.choice(neighbors)
-        edge = (current, next_node)
-
-        if edge in visited_edges:
-            visited_nodes.append(next_node)
-            # path_edges.append(edge)
-            print(f"遇到重复边 {edge}，结束遍历。")
-            break
-
-        visited_nodes.append(next_node)
-        # path_edges.append(edge)
-        visited_edges.add(edge)
-        current = next_node
-
-    walk_path = ' '.join(visited_nodes)
-    print(f"遍历路径: {walk_path}")
-    with open('random_walk_path.txt', 'w', encoding='utf-8') as f:
-        f.write(walk_path)
-    return
+    return edge_weights
 
 # 示例测试
-if __name__ == "__main__":
-    words = ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", "the", "quick"]
-    edge_weights = build_word_graph(words)
-    visible_graph(edge_weights)
+# if __name__ == "__main__":
+#     words = ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", "the", "quick"]
+#     edge_weights = build_word_graph(words)
+#     visible_graph(edge_weights)
