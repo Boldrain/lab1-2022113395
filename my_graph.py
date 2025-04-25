@@ -1,8 +1,8 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
 import networkx as nx
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import random
-import string
 import os
 
 class graph:
@@ -165,9 +165,9 @@ class graph:
     def get_pagerank(self, damping=0.85, max_iter=100, tol=1e-6):
         print('----------------------------------------------------')
         specific_node = input('请输入你想要查询pr值的节点:')
-        # edges: List of (from, to)
-        graph = defaultdict(set)       # 出边
-        reverse_graph = defaultdict(set)  # 入边
+
+        graph = defaultdict(set)
+        reverse_graph = defaultdict(set)
         nodes = set()
         graph_data = self.graph_data
 
@@ -178,11 +178,21 @@ class graph:
             nodes.add(dst)
 
         N = len(nodes)
-        pr = {node: 1 / N for node in nodes}
+
+        tfidf_scores = get_tfidf(graph_data)
+        # TF-IDF 初始化
+        if tfidf_scores:
+            total_score = sum(tfidf_scores.get(node, 0.0) for node in nodes)
+            if total_score == 0:
+                pr = {node: 1 / N for node in nodes}
+            else:
+                pr = {node: tfidf_scores.get(node, 0.0) / total_score for node in nodes}
+        else:
+            pr = {node: 1 / N for node in nodes}
 
         for iteration in range(max_iter):
             new_pr = {}
-            delta = 0  # 用于判断是否收敛
+            delta = 0
 
             for node in nodes:
                 inbound = reverse_graph[node]
@@ -198,6 +208,10 @@ class graph:
 
             if delta < tol:
                 break
+        
+        for (key, value) in pr.items():
+            pr[key] = float(value)
+
         if specific_node:
             if specific_node in pr:
                 print(f"{specific_node}的PageRank值: {pr[specific_node]}")
@@ -245,6 +259,33 @@ class graph:
         with open('random_walk_path.txt', 'w', encoding='utf-8') as f:
             f.write(walk_path)
         return
+    
+def get_tfidf(graph_dict):
+    # 1. 构造“文档集合”：每个出发点视为一个“文档”
+    docs = defaultdict(list)  # {src: [dst1, dst2, dst2, ...]} （按权重复）
+    for (src, dst), count in graph_dict.items():
+        docs[src].extend([dst] * count)  # 根据出现次数扩展
+
+    # 2. 准备文本：把 dst 词连成一个字符串
+    node_texts = []
+    node_list = []
+    for src, dst_list in docs.items():
+        node_list.append(src)
+        node_texts.append(" ".join(dst_list))
+
+    # 3. 用 TF-IDF 处理
+    vectorizer = TfidfVectorizer()
+    X = vectorizer.fit_transform(node_texts)
+    feature_names = vectorizer.get_feature_names_out()
+    tfidf_matrix = X.toarray()
+
+    # 4. 累加每个节点（词）的 tf-idf 得分
+    tfidf_scores = defaultdict(float)
+    for row in tfidf_matrix:
+        for i, score in enumerate(row):
+            tfidf_scores[feature_names[i]] += score
+
+    return dict(tfidf_scores)
 
 def insert_bridge_words(graph):
     print('----------------------------------------------------')
@@ -379,7 +420,7 @@ def build_word_graph(word_list):
     return edge_weights
 
 # 示例测试
-# if __name__ == "__main__":
-#     words = ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", "the", "quick"]
-#     edge_weights = build_word_graph(words)
-#     visible_graph(edge_weights)
+if __name__ == "__main__":
+    graph_test = graph(file_path='sample.txt')
+    dict_test = get_tfidf(graph_test.graph_data)
+    print(dict)
