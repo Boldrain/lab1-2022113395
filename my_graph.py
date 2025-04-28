@@ -190,9 +190,13 @@ class graph:
         else:
             pr = {node: 1 / N for node in nodes}
 
+        iteration = 0
         for iteration in range(max_iter):
             new_pr = {}
             delta = 0
+
+            # 统计所有出度为0节点的pr总和
+            dangling_sum = sum(pr[node] for node in nodes if len(graph[node]) == 0)
 
             for node in nodes:
                 inbound = reverse_graph[node]
@@ -201,14 +205,15 @@ class graph:
                     out_degree = len(graph[q])
                     if out_degree > 0:
                         rank_sum += pr[q] / out_degree
-                new_pr[node] = (1 - damping) / N + damping * rank_sum
+                # 加上悬挂节点贡献：平均分配
+                new_pr[node] = (1 - damping) / N + damping * (rank_sum + dangling_sum / N)
                 delta += abs(new_pr[node] - pr[node])
 
             pr = new_pr
 
             if delta < tol:
                 break
-        
+
         for (key, value) in pr.items():
             pr[key] = float(value)
 
