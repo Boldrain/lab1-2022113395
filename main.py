@@ -1,15 +1,19 @@
 import os
 import my_graph
+import sys
 
 
 # 示例：使用文件路径调用函数
 if __name__ == "__main__":
-    file_path = input('键入你的文件路径:')  # 请将此处替换为你的文件路径
+    if len(sys.argv) < 2:
+        file_path = input('键入你的文件路径:')  # 请将此处替换为你的文件路径  
+    else:
+        file_path = sys.argv[1]
+        
     if (file_path == ''):
         file_path = 'sample.txt'
     elif file_path.endswith('.txt') == False:
-        file_path = file_path + '.txt'
-
+        file_path = file_path + '.txt'   
     if (os.path.exists(file_path) == False):
         print("文件不存在，请检查路径")
         exit(1)
