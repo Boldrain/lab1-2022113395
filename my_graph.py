@@ -10,6 +10,7 @@ class graph:
         self.file_path = file_path
         words = process_text_file(file_path)
         self.graph_data = build_word_graph(words)
+        self.nodes = self.get_all_nodes()
 
     def reload_graph(self, file_path):
         if (file_path == ''):
@@ -24,6 +25,14 @@ class graph:
         self.file_path = file_path
         words = process_text_file(file_path)
         self.graph_data = build_word_graph(words)
+        self.nodes = self.get_all_nodes()
+    
+    def get_all_nodes(self):
+        # 获取图中所有节点
+        nodes_from = {src for (src, _) in self.graph_data}
+        nodes_to = {dst for (_, dst) in self.graph_data}
+        all_nodes = nodes_from.union(nodes_to)
+        return all_nodes
 
     def visible_graph(self):
         G = nx.DiGraph()
@@ -92,9 +101,7 @@ class graph:
         graph_data = self.graph_data
 
         # 获取图中所有节点
-        nodes_from = {src for (src, _) in graph_data}
-        nodes_to = {dst for (_, dst) in graph_data}
-        all_nodes = nodes_from.union(nodes_to)
+        all_nodes = self.nodes
 
         # 检查两个单词是否在图中
         if word1 not in all_nodes :
@@ -140,26 +147,27 @@ class graph:
             return
         elif (start == '' and end != '') or (start != '' and end == ''):
             graph_data = self.graph_data
-            nodes, distance = floyd(graph_data)
+            all_nodes = self.nodes
             root = start if start != '' else end
-            if root not in nodes:
+            if root not in all_nodes:
                 print(f"{root} 不在图中.")
                 return
-            print(f"从 {root} 到其他节点的最短路径:")
-            for node in nodes:
-                if node != root:
-                    if distance[(root, node)] == float('inf'):
-                        print(f"{root} 到 {node} 不可达.")
-                    else:
-                        print(f"{root} 到 {node} 的最短距离: {distance[(root, node)]}.")
+            
+            paths, distance = dijkstra_all_from_start(graph_data, all_nodes, root)
+            for node, path in paths.items():
+                path_str = ' -> '.join(path)
+                print(f"从 {root} 到 {node} 的路径: {path_str}, 距离: {distance[node]}.")
+                
         else :
             graph_data = self.graph_data
-            path, distance = dijkstra(graph_data, start, end)
-            if path is None:
+            all_nodes = self.nodes
+            paths, distance = dijkstra_all_path(graph_data, all_nodes, start, end)
+            if paths is None:
                 print(f"{start} 到 {end} 不可达.")
             else:
-                print(f"最短路径: {' -> '.join(path)}.")
-                print(f"最短距离: {distance}.")
+                for path in paths:
+                    path_str = ' -> '.join(path)
+                    print(f"从 {start} 到 {end} 的路径: {path_str}, 距离: {distance}.")
             return
         
     def get_pagerank(self, damping=0.85, max_iter=100, tol=1e-6):
@@ -223,7 +231,9 @@ class graph:
             else:
                 print(f"{specific_node} 不在图中.")
         else:
-            print(f'全部的PageRank值:{pr}')
+            print(f'全部的PageRank值:')
+            for node, value in pr.items():
+                print(f"{node}: {value:.6f}")
         return pr
 
     def random_walk(self):
@@ -316,21 +326,16 @@ def insert_bridge_words(graph):
     print(' '.join(new_sentence))
     return
 
-def dijkstra(graph_data, start, end):
+def dijkstra(graph_data, nodes, start, end):
     # 获取图中所有节点
-    nodes_from = {src for (src, _) in graph_data}
-    nodes_to = {dst for (_, dst) in graph_data}
-    all_nodes = nodes_from.union(nodes_to)
+    all_nodes = nodes
 
     unvisited = set(all_nodes) - {start}
     distances = {node: graph_data[(start, node)] if (start, node) in graph_data else float('inf') for node in all_nodes}
-    # for node_left in all_nodes:
-    #     distances.update({node_right: graph_data[node_left][node_right] if (node_left, node_right) in graph_data else float('inf') for node_right in (all_nodes - {node_left})})
-    previous = {node: None for node in all_nodes}
-    for node in all_nodes:
-        if (start, node) in graph_data:
-            previous[node] = start
     distances[start] = 0
+    previous = {}
+    for node in all_nodes:
+        previous[node] = start if (start, node) in graph_data else None
 
     while unvisited:
         # 找当前距离最小的节点
@@ -363,14 +368,91 @@ def dijkstra(graph_data, start, end):
         return path, distances[end]
     else:
         return None, None
+
+def dijkstra_all_from_start(graph_data, nodes, root):
+    all_nodes = nodes
+    distances = {node: float('inf') for node in all_nodes}
+    previous = {node: None for node in all_nodes}
+    distances[root] = 0
+
+    unvisited = set(all_nodes)
+
+    while unvisited:
+        current = min(unvisited, key=lambda node: distances[node])
+        if distances[current] == float('inf'):
+            break
+        unvisited.remove(current)
+
+        for neighbor in all_nodes:
+            if (current, neighbor) in graph_data and neighbor in unvisited:
+                new_distance = distances[current] + graph_data[(current, neighbor)]
+                if new_distance < distances[neighbor]:
+                    distances[neighbor] = new_distance
+                    previous[neighbor] = current
+
+    # 重建所有路径
+    paths = {}
+    for node in all_nodes:
+        if distances[node] < float('inf') and node != root:
+            path = []
+            curr = node
+            while curr:
+                path.append(curr)
+                curr = previous[curr]
+            path.reverse()
+            paths[node] = path
+
+    return paths, distances
+
+
+def dijkstra_all_path(graph_data, nodes, start, end):
+    all_nodes = nodes
+
+    unvisited = set(all_nodes)
+    distances = {node: float('inf') for node in all_nodes}
+    distances[start] = 0
+
+    # 每个节点的前驱节点列表
+    previous = defaultdict(list)
+
+    while unvisited:
+        current = min(unvisited, key=lambda node: distances[node])
+        if distances[current] == float('inf'):
+            break
+
+        unvisited.remove(current)
+
+        for node in all_nodes:
+            if (current, node) in graph_data and node in unvisited:
+                new_distance = distances[current] + graph_data[(current, node)]
+                if new_distance < distances[node]:
+                    distances[node] = new_distance
+                    previous[node] = [current]  # 重新设置前驱
+                elif new_distance == distances[node]:
+                    previous[node].append(current)  # 添加额外的前驱
+
+    # 回溯所有路径
+    all_paths = []
+
+    def backtrack(curr, path):
+        if curr == start:
+            all_paths.append([start] + path[::-1])
+            return
+        for prev in previous[curr]:
+            backtrack(prev, path + [curr])
+
+    if distances[end] != float('inf'):
+        backtrack(end, [])
+        return all_paths, distances[end]
+    else:
+        return [], None
+
     
-def floyd(graph_data):
+def floyd(graph_data, nodes):
     # 初始化距离矩阵
     dist = defaultdict(int)
     # 获取图中所有节点
-    nodes_from = {src for (src, _) in graph_data}
-    nodes_to = {dst for (_, dst) in graph_data}
-    all_nodes = nodes_from.union(nodes_to)
+    all_nodes = nodes
 
     for left in all_nodes:
         for right in all_nodes :
@@ -387,7 +469,7 @@ def floyd(graph_data):
                 if dist[(i, j)] > dist[(i, k)] + dist[(k, j)]:
                     dist[(i, j)] = dist[(i, k)] + dist[(k, j)]
     
-    return all_nodes, dist
+    return dist
     
 
 
