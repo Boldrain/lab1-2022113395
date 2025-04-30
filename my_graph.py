@@ -140,8 +140,8 @@ class graph:
     
     def find_shortest_path(self):
         print('----------------------------------------------------')
-        start = input('请输入起点:')
-        end = input('请输入终点:')
+        start = input('请输入起点:').lower()
+        end = input('请输入终点:').lower()
         if (start == '' and end == ''):
             print("你没有输入任何内容！")
             return
@@ -172,7 +172,7 @@ class graph:
         
     def get_pagerank(self, damping=0.85, max_iter=100, tol=1e-6):
         print('----------------------------------------------------')
-        specific_node = input('请输入你想要查询pr值的节点:')
+        specific_node = input('请输入你想要查询pr值的节点:').lower()
 
         graph = defaultdict(set)
         reverse_graph = defaultdict(set)
