@@ -7,8 +7,11 @@ import sys
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         file_path = input('键入你的文件路径:')  # 请将此处替换为你的文件路径  
-    else:
+    elif len(sys.argv) == 2:
         file_path = sys.argv[1]
+    else:
+        print("参数过多，请检查")
+        exit(1)
         
     if (file_path == ''):
         file_path = 'sample.txt'
