@@ -144,7 +144,7 @@ class graph:
         end = input('请输入终点:').lower()
         if (start == '' and end == ''):
             print("你没有输入任何内容！")
-            return
+            return  
         elif (start == '' and end != '') or (start != '' and end == ''):
             graph_data = self.graph_data
             all_nodes = self.nodes
@@ -154,6 +154,8 @@ class graph:
                 return
             
             paths, distance = dijkstra_all_from_start(graph_data, all_nodes, root)
+            if paths is None:
+                return 
             for node, path in paths.items():
                 path_str = ' -> '.join(path)
                 print(f"从 {root} 到 {node} 的路径: {path_str}, 距离: {distance[node]}.")
@@ -370,6 +372,9 @@ def dijkstra(graph_data, nodes, start, end):
         return None, None
 
 def dijkstra_all_from_start(graph_data, nodes, root):
+    if root not in nodes:
+        print(f"{root} 不在图中.")
+        return None, None
     all_nodes = nodes
     distances = {node: float('inf') for node in all_nodes}
     previous = {node: None for node in all_nodes}
@@ -407,7 +412,9 @@ def dijkstra_all_from_start(graph_data, nodes, root):
 
 def dijkstra_all_path(graph_data, nodes, start, end):
     all_nodes = nodes
-
+    if start not in all_nodes or end not in all_nodes:
+        print(f"{start} 或 {end} 不在图中.")
+        return None, None
     unvisited = set(all_nodes)
     distances = {node: float('inf') for node in all_nodes}
     distances[start] = 0
