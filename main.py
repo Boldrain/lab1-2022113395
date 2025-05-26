@@ -12,11 +12,11 @@ if __name__ == "__main__":
     else:
         print("参数过多，请检查")
         exit(1)
-        
+
     if (file_path == ''):
         file_path = 'sample.txt'
     elif file_path.endswith('.txt') == False:
-        file_path = file_path + '.txt'   
+        file_path = file_path + '.txt'
     if (os.path.exists(file_path) == False):
         print("文件不存在，请检查路径")
         exit(1)
@@ -25,7 +25,8 @@ if __name__ == "__main__":
     graph_data = graph.graph_data
 
     while True:
-        choice = input('功能列表：\n1.文字化图\n2.可视化图\n3.桥接字\n4.插入桥接字\n5.最短路径\n6.求pr值\n7.随机游走\n8.重新输入文件路径\n9.退出\n请输入你的选择:')
+        choice = input('功能列表：\n1.文字化图\n2.可视化图\n3.桥接字\n4.插入桥接字 \
+                       \n5.最短路径\n6.求pr值\n7.随机游走\n8.重新输入文件路径\n9.退出\n请输入你的选择:')
         if choice == '1':
             graph.word_graph()
         elif choice == '2':
