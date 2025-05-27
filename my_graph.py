@@ -167,7 +167,7 @@ class graph:
             graph_data = self.graph_data
             all_nodes = self.nodes
             paths, distance = dijkstra_all_path(graph_data, all_nodes, start, end)
-            if paths is None:
+            if paths == []:
                 print(f"{start} 到 {end} 不可达.")
             else:
                 for path in paths:
