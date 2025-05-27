@@ -77,7 +77,10 @@ class graph:
         plt.title("Word Adjacency Directed Graph", fontsize=14)
         plt.axis("off")
         plt.tight_layout()
-        plt.savefig("/home/zry/software_lab/lab1/graph.png", dpi=300, bbox_inches='tight')
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        save_path = os.path.join(current_dir, "graph.png")
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
 
     def word_graph(self):
